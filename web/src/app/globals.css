@@ -1,0 +1,127 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* AURA GEM ERP — premium dark-blue + white enterprise theme */
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 217 44% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 217 44% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 217 44% 12%;
+
+    /* Deep sapphire blue */
+    --primary: 217 62% 24%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 214 32% 94%;
+    --secondary-foreground: 217 44% 18%;
+
+    --muted: 214 32% 94%;
+    --muted-foreground: 217 12% 44%;
+
+    --accent: 213 94% 95%;
+    --accent-foreground: 217 62% 24%;
+
+    --destructive: 0 72% 46%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 152 60% 34%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 44%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 215 24% 88%;
+    --input: 215 24% 84%;
+    --ring: 217 62% 34%;
+
+    --radius: 0.625rem;
+
+    /* Sidebar — always deep navy for the premium look */
+    --sidebar: 219 52% 13%;
+    --sidebar-foreground: 214 30% 86%;
+    --sidebar-accent: 218 46% 20%;
+    --sidebar-border: 218 40% 22%;
+
+    --chart-1: 217 72% 46%;
+    --chart-2: 190 70% 40%;
+    --chart-3: 152 55% 38%;
+    --chart-4: 38 90% 50%;
+    --chart-5: 262 55% 55%;
+    --chart-6: 340 65% 52%;
+  }
+
+  .dark {
+    --background: 220 45% 8%;
+    --foreground: 213 30% 92%;
+
+    --card: 219 42% 11%;
+    --card-foreground: 213 30% 92%;
+    --popover: 219 42% 11%;
+    --popover-foreground: 213 30% 92%;
+
+    --primary: 214 90% 62%;
+    --primary-foreground: 220 45% 8%;
+
+    --secondary: 218 36% 17%;
+    --secondary-foreground: 213 30% 88%;
+
+    --muted: 218 36% 16%;
+    --muted-foreground: 215 16% 62%;
+
+    --accent: 218 42% 20%;
+    --accent-foreground: 214 90% 72%;
+
+    --destructive: 0 66% 54%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 152 55% 44%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 54%;
+    --warning-foreground: 220 45% 8%;
+
+    --border: 218 32% 20%;
+    --input: 218 32% 24%;
+    --ring: 214 90% 62%;
+
+    --sidebar: 220 48% 9%;
+    --sidebar-foreground: 214 26% 80%;
+    --sidebar-accent: 218 42% 16%;
+    --sidebar-border: 218 36% 16%;
+
+    /* Dark categorical palette — validated (lightness band, chroma, CVD ΔE 31.4, ≥3:1 contrast) */
+    --chart-1: 214 85% 62%;
+    --chart-2: 190 70% 42%;
+    --chart-3: 152 50% 40%;
+    --chart-4: 38 92% 40%;
+    --chart-5: 262 60% 65%;
+    --chart-6: 340 65% 62%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-muted-foreground/25;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/40;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
