@@ -1,0 +1,765 @@
+// AURA GEM ERP — PostgreSQL schema (Prisma)
+// Conventions: UUID PKs, Decimal(14,2) money, Decimal(10,3) carat weights,
+// soft archival only — domain rows are never deleted.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────── Auth & Users ───────────────────────────
+
+enum Role {
+  SUPER_ADMIN
+  OWNER
+  MANAGER
+  FINANCE_OFFICER
+  INVENTORY_OFFICER
+  HEAT_OPERATOR
+  VIEWER
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  fullName     String
+  role         Role     @default(VIEWER)
+  phone        String?
+  avatarUrl    String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  refreshTokens    RefreshToken[]
+  auditLogs        AuditLog[]
+  notifications    Notification[]
+  createdStones    Stone[]           @relation("StoneCreatedBy")
+  operatedBatches  TreatmentBatch[]  @relation("BatchOperator")
+  stoneEvents      StoneEvent[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// ─────────────────────────── Master Data ───────────────────────────
+
+model GemType {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  species   String?
+  variety   String?
+  colorHint String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  stones Stone[]
+
+  @@map("gem_types")
+}
+
+model PurchaseLocation {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  district  String?
+  notes     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  stones Stone[]
+
+  @@map("purchase_locations")
+}
+
+model Seller {
+  id        String   @id @default(uuid())
+  name      String
+  phone     String?
+  nicNumber String?
+  address   String?
+  notes     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  stones Stone[]
+
+  @@map("sellers")
+}
+
+model Buyer {
+  id        String   @id @default(uuid())
+  name      String
+  company   String?
+  country   String?
+  email     String?
+  phone     String?
+  address   String?
+  notes     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  shipments ExportShipment[]
+  sales     SaleRecord[]
+
+  @@map("buyers")
+}
+
+model Machine {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  type        TreatmentType
+  maxTempC    Int?
+  location    String?
+  notes       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  batches TreatmentBatch[]
+
+  @@map("machines")
+}
+
+model Laboratory {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  country   String?
+  website   String?
+  contact   String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  certifications Certification[]
+
+  @@map("laboratories")
+}
+
+model ExpenseCategory {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  isSystem    Boolean  @default(false) // seeded categories (Heat, Cutting…) cannot be renamed
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  stoneExpenses   StoneExpense[]
+  companyExpenses CompanyExpense[]
+
+  @@map("expense_categories")
+}
+
+// ─────────────────────── Workflow Engine ───────────────────────
+
+enum StageKind {
+  PURCHASE
+  INSPECTION
+  CRACK_REMOVAL
+  SPLITTING
+  GAS_HEAT
+  ELECTRIC_TREATMENT
+  CUTTING
+  POLISHING
+  CERTIFICATION
+  EXPORT_SALE
+}
+
+enum StageStatus {
+  NOT_APPLICABLE
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  SKIPPED
+}
+
+model WorkflowTemplate {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  code        String   @unique // A, B, C, D…
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  stages WorkflowTemplateStage[]
+  stones Stone[]
+
+  @@map("workflow_templates")
+}
+
+model WorkflowTemplateStage {
+  id         String    @id @default(uuid())
+  templateId String
+  kind       StageKind
+  sortOrder  Int
+  isOptional Boolean   @default(false)
+
+  template WorkflowTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, kind])
+  @@map("workflow_template_stages")
+}
+
+/// Per-stone copy of the workflow plan — editable without touching the template.
+model StoneStage {
+  id             String      @id @default(uuid())
+  stoneId        String
+  kind           StageKind
+  sortOrder      Int
+  status         StageStatus @default(PENDING)
+  startedAt      DateTime?
+  completedAt    DateTime?
+  skippedReason  String?
+  linkedEntity   String? // "TreatmentBatch" | "CuttingRecord" | "Certification" | "ExportShipment" | "SplitEvent"
+  linkedEntityId String?
+
+  stone Stone @relation(fields: [stoneId], references: [id], onDelete: Cascade)
+
+  @@unique([stoneId, kind])
+  @@index([stoneId, sortOrder])
+  @@map("stone_stages")
+}
+
+// ─────────────────────────── Stones ───────────────────────────
+
+enum StoneStatus {
+  PURCHASED
+  INSPECTION
+  CRACK_REMOVAL
+  SPLITTING
+  SPLIT // parent archived after split
+  HEAT_TREATMENT
+  ELECTRIC_TREATMENT
+  CUTTING
+  POLISHING
+  CERTIFICATION
+  READY_FOR_EXPORT
+  EXPORTED
+  SOLD_LOCALLY
+  ARCHIVED
+}
+
+enum StoneKind {
+  ROUGH
+  GEUDA
+  SEMI_TREATED
+  CUT
+  FACETED
+}
+
+model Stone {
+  id       String  @id @default(uuid())
+  code     String  @unique // G0001, G0001-A
+  parentId String?
+
+  gemTypeId          String
+  purchaseLocationId String?
+  sellerId           String?
+  workflowTemplateId String?
+  createdById        String?
+  splitEventId       String? // set on CHILD stones produced by a split
+
+  status    StoneStatus @default(PURCHASED)
+  stoneKind StoneKind   @default(ROUGH)
+
+  weightCt   Decimal  @db.Decimal(10, 3)
+  shape      String?
+  dimensions String? // "12.4 × 9.1 × 6.2 mm"
+  color      String?
+  clarity    String?
+  origin     String?
+
+  purchaseDate DateTime
+  purchaseCost Decimal  @db.Decimal(14, 2) // allocated cost for split children
+  currentValue Decimal? @db.Decimal(14, 2)
+  salePrice    Decimal? @db.Decimal(14, 2)
+
+  isArchived Boolean  @default(false)
+  notes      String?
+  tags       String[] @default([])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  parent     Stone?  @relation("StoneSplit", fields: [parentId], references: [id])
+  children   Stone[] @relation("StoneSplit")
+  splitEvent SplitEvent? @relation("SplitChildren", fields: [splitEventId], references: [id])
+
+  gemType          GemType           @relation(fields: [gemTypeId], references: [id])
+  purchaseLocation PurchaseLocation? @relation(fields: [purchaseLocationId], references: [id])
+  seller           Seller?           @relation(fields: [sellerId], references: [id])
+  workflowTemplate WorkflowTemplate? @relation(fields: [workflowTemplateId], references: [id])
+  createdBy        User?             @relation("StoneCreatedBy", fields: [createdById], references: [id])
+
+  stages         StoneStage[]
+  events         StoneEvent[]
+  images         StoneImage[]
+  documents      StoneDocument[]
+  expenses       StoneExpense[]
+  cuttingRecords CuttingRecord[]
+  certifications Certification[]
+  batchLinks     TreatmentBatchStone[]
+  electricRun    ElectricTreatment?
+  saleRecord     SaleRecord?
+  exportItems    ExportItem[]
+  splitAsParent  SplitEvent? @relation("SplitParent")
+
+  @@index([status])
+  @@index([gemTypeId])
+  @@index([purchaseLocationId])
+  @@index([purchaseDate])
+  @@index([parentId])
+  @@map("stones")
+}
+
+/// Append-only lifecycle timeline (part of permanent audit history).
+model StoneEvent {
+  id        String    @id @default(uuid())
+  stoneId   String
+  userId    String?
+  kind      String // STONE_CREATED, STAGE_STARTED, STAGE_COMPLETED, SPLIT, EXPENSE_ADDED, SOLD…
+  stage     StageKind?
+  title     String
+  detail    String?
+  metadata  Json?
+  createdAt DateTime  @default(now())
+
+  stone Stone @relation(fields: [stoneId], references: [id], onDelete: Cascade)
+  user  User? @relation(fields: [userId], references: [id])
+
+  @@index([stoneId, createdAt])
+  @@map("stone_events")
+}
+
+enum ImageStage {
+  PURCHASE
+  INSPECTION
+  BEFORE_HEAT
+  AFTER_HEAT
+  ELECTRIC_PROGRESS
+  BEFORE_CUT
+  AFTER_CUT
+  CERTIFICATION
+  EXPORT
+  OTHER
+}
+
+model StoneImage {
+  id        String     @id @default(uuid())
+  stoneId   String
+  stage     ImageStage @default(OTHER)
+  url       String
+  thumbUrl  String?
+  caption   String?
+  isVideo   Boolean    @default(false)
+  sortOrder Int        @default(0)
+  createdAt DateTime   @default(now())
+
+  stone Stone @relation(fields: [stoneId], references: [id], onDelete: Cascade)
+
+  @@index([stoneId, stage])
+  @@map("stone_images")
+}
+
+model StoneDocument {
+  id        String   @id @default(uuid())
+  stoneId   String
+  name      String
+  url       String
+  mimeType  String?
+  createdAt DateTime @default(now())
+
+  stone Stone @relation(fields: [stoneId], references: [id], onDelete: Cascade)
+
+  @@index([stoneId])
+  @@map("stone_documents")
+}
+
+// ─────────────────────────── Splitting ───────────────────────────
+
+enum CostAllocation {
+  BY_WEIGHT
+  MANUAL
+}
+
+model SplitEvent {
+  id             String         @id @default(uuid())
+  parentStoneId  String         @unique
+  allocation     CostAllocation
+  parentCost     Decimal        @db.Decimal(14, 2)
+  childCount     Int
+  performedById  String?
+  notes          String?
+  createdAt      DateTime       @default(now())
+
+  parentStone Stone   @relation("SplitParent", fields: [parentStoneId], references: [id])
+  children    Stone[] @relation("SplitChildren")
+
+  @@map("split_events")
+}
+
+// ─────────────────────────── Treatments ───────────────────────────
+
+enum TreatmentType {
+  GAS
+  ELECTRIC
+}
+
+enum BatchStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model TreatmentBatch {
+  id            String        @id @default(uuid())
+  batchCode     String        @unique // HT-2026-001
+  type          TreatmentType @default(GAS)
+  machineId     String
+  operatorId    String?
+  startAt       DateTime?
+  expectedEndAt DateTime?
+  actualEndAt   DateTime?
+  temperatureC  Int?
+  durationHours Int?
+  status        BatchStatus   @default(PENDING)
+  remarks       String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  machine  Machine               @relation(fields: [machineId], references: [id])
+  operator User?                 @relation("BatchOperator", fields: [operatorId], references: [id])
+  stones   TreatmentBatchStone[]
+  images   TreatmentImage[]
+
+  @@index([status])
+  @@map("treatment_batches")
+}
+
+model TreatmentBatchStone {
+  id      String @id @default(uuid())
+  batchId String
+  stoneId String
+  result  String? // per-stone outcome notes
+  weightBeforeCt Decimal? @db.Decimal(10, 3)
+  weightAfterCt  Decimal? @db.Decimal(10, 3)
+
+  batch TreatmentBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  stone Stone          @relation(fields: [stoneId], references: [id])
+
+  @@unique([batchId, stoneId])
+  @@map("treatment_batch_stones")
+}
+
+model TreatmentImage {
+  id        String   @id @default(uuid())
+  batchId   String
+  url       String
+  caption   String?
+  createdAt DateTime @default(now())
+
+  batch TreatmentBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@map("treatment_images")
+}
+
+enum ElectricStatus {
+  RUNNING
+  PAUSED
+  COMPLETED
+  FAILED
+}
+
+model ElectricTreatment {
+  id              String         @id @default(uuid())
+  stoneId         String         @unique
+  plannedWeeks    Int
+  startDate       DateTime
+  estimatedFinish DateTime?
+  completionPct   Int            @default(0)
+  status          ElectricStatus @default(RUNNING)
+  notes           String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  stone Stone                @relation(fields: [stoneId], references: [id])
+  logs  ElectricProgressLog[]
+
+  @@map("electric_treatments")
+}
+
+model ElectricProgressLog {
+  id               String   @id @default(uuid())
+  treatmentId      String
+  weekNumber       Int
+  completionPct    Int
+  colorImprovement String?
+  imageUrl         String?
+  notes            String?
+  loggedAt         DateTime @default(now())
+
+  treatment ElectricTreatment @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
+
+  @@unique([treatmentId, weekNumber])
+  @@map("electric_progress_logs")
+}
+
+// ─────────────────────────── Cutting ───────────────────────────
+
+model CuttingRecord {
+  id             String   @id @default(uuid())
+  stoneId        String
+  cuttingDate    DateTime
+  cutterName     String
+  weightBeforeCt Decimal  @db.Decimal(10, 3)
+  weightAfterCt  Decimal  @db.Decimal(10, 3)
+  lossPct        Decimal  @db.Decimal(5, 2)
+  cost           Decimal  @db.Decimal(14, 2)
+  notes          String?
+  createdAt      DateTime @default(now())
+
+  stone Stone @relation(fields: [stoneId], references: [id])
+
+  @@index([stoneId])
+  @@map("cutting_records")
+}
+
+// ─────────────────────── Certification ───────────────────────
+
+enum CertificationStatus {
+  PENDING
+  SENT_TO_LAB
+  ISSUED
+  REJECTED
+}
+
+model Certification {
+  id                String              @id @default(uuid())
+  stoneId           String
+  laboratoryId      String
+  certificateNumber String?             @unique
+  issueDate         DateTime?
+  pdfUrl            String?
+  cost              Decimal?            @db.Decimal(14, 2)
+  status            CertificationStatus @default(PENDING)
+  notes             String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  stone      Stone      @relation(fields: [stoneId], references: [id])
+  laboratory Laboratory @relation(fields: [laboratoryId], references: [id])
+
+  @@index([stoneId])
+  @@index([status])
+  @@map("certifications")
+}
+
+// ─────────────────────────── Financials ───────────────────────────
+
+model StoneExpense {
+  id         String   @id @default(uuid())
+  stoneId    String
+  categoryId String
+  amount     Decimal  @db.Decimal(14, 2)
+  incurredAt DateTime @default(now())
+  note       String?
+  createdAt  DateTime @default(now())
+
+  stone    Stone           @relation(fields: [stoneId], references: [id])
+  category ExpenseCategory @relation(fields: [categoryId], references: [id])
+
+  @@index([stoneId])
+  @@index([categoryId])
+  @@index([incurredAt])
+  @@map("stone_expenses")
+}
+
+/// Overheads not tied to a single stone (salary allocation, machine maintenance…).
+model CompanyExpense {
+  id         String   @id @default(uuid())
+  categoryId String
+  amount     Decimal  @db.Decimal(14, 2)
+  incurredAt DateTime @default(now())
+  note       String?
+  createdAt  DateTime @default(now())
+
+  category ExpenseCategory @relation(fields: [categoryId], references: [id])
+
+  @@index([incurredAt])
+  @@map("company_expenses")
+}
+
+// ─────────────────────────── Export & Sales ───────────────────────────
+
+enum ShipmentStatus {
+  DRAFT
+  PENDING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+model ExportShipment {
+  id             String         @id @default(uuid())
+  shipmentCode   String         @unique // EXP-2026-001
+  buyerId        String
+  country        String
+  exportDate     DateTime?
+  invoiceNumber  String?
+  courier        String?
+  trackingNumber String?
+  shippingCost   Decimal?       @db.Decimal(14, 2)
+  exportValue    Decimal        @default(0) @db.Decimal(14, 2)
+  status         ShipmentStatus @default(DRAFT)
+  notes          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  buyer     Buyer            @relation(fields: [buyerId], references: [id])
+  items     ExportItem[]
+  documents ExportDocument[]
+
+  @@index([status])
+  @@index([exportDate])
+  @@map("export_shipments")
+}
+
+model ExportItem {
+  id         String  @id @default(uuid())
+  shipmentId String
+  stoneId    String
+  salePrice  Decimal @db.Decimal(14, 2)
+
+  shipment ExportShipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  stone    Stone          @relation(fields: [stoneId], references: [id])
+
+  @@unique([shipmentId, stoneId])
+  @@map("export_items")
+}
+
+model ExportDocument {
+  id         String   @id @default(uuid())
+  shipmentId String
+  name       String
+  url        String
+  createdAt  DateTime @default(now())
+
+  shipment ExportShipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@map("export_documents")
+}
+
+enum SaleChannel {
+  EXPORT
+  LOCAL
+}
+
+/// Written when a stone is sold (locally or via export). Freezes the profit math.
+model SaleRecord {
+  id          String      @id @default(uuid())
+  stoneId     String      @unique
+  buyerId     String?
+  channel     SaleChannel
+  saleDate    DateTime
+  salePrice   Decimal     @db.Decimal(14, 2)
+  totalCost   Decimal     @db.Decimal(14, 2) // purchase + all expenses at sale time
+  grossProfit Decimal     @db.Decimal(14, 2)
+  netProfit   Decimal     @db.Decimal(14, 2)
+  profitPct   Decimal     @db.Decimal(8, 2)
+  roi         Decimal     @db.Decimal(8, 2)
+  createdAt   DateTime    @default(now())
+
+  stone Stone  @relation(fields: [stoneId], references: [id])
+  buyer Buyer? @relation(fields: [buyerId], references: [id])
+
+  @@index([saleDate])
+  @@map("sale_records")
+}
+
+// ─────────────────────────── Audit & Notifications ───────────────────────────
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String // CREATE, UPDATE, STATUS_CHANGE, SPLIT, LOGIN…
+  entity    String // "Stone", "TreatmentBatch"…
+  entityId  String?
+  before    Json?
+  after     Json?
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([entity, entityId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+enum NotificationKind {
+  TREATMENT_FINISHED
+  ELECTRIC_DUE
+  CERTIFICATE_MISSING
+  EXPORT_PENDING
+  INVENTORY_ALERT
+  SYSTEM
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String?          // null = broadcast to all
+  kind      NotificationKind
+  title     String
+  body      String?
+  link      String?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+/// Monotonic counters for human-readable codes (G0001, HT-2026-001, EXP-2026-001).
+model Counter {
+  key   String @id
+  value Int    @default(0)
+
+  @@map("counters")
+}
+
+/// Single-tenant company profile — exactly one row per deployment.
+/// Each gem company gets its own deployment/database; this holds their identity & branding.
+model CompanyProfile {
+  id          String   @id @default(uuid())
+  companyName String
+  legalName   String?
+  ownerName   String?
+  email       String?
+  phone       String?
+  address     String?
+  currency    String   @default("LKR")
+  logoUrl     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("company_profile")
+}
