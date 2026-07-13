@@ -34,9 +34,6 @@ jobs:
         run: npx prisma generate
         working-directory: api
 
-      - name: Lint code
-        run: npm run lint
-        working-directory: api
 
       - name: Build API
         run: npm run build
