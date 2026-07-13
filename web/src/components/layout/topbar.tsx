@@ -18,6 +18,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface Notification {
   id: string;
@@ -35,6 +43,7 @@ export function Topbar() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [dark, setDark] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem('aura.theme');
@@ -74,7 +83,8 @@ export function Topbar() {
   };
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur lg:px-8">
+    <>
+      <header className="sticky top-0 z-20 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur lg:px-8">
       <form onSubmit={onSearch} className="relative hidden max-w-md flex-1 md:block">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -159,12 +169,35 @@ export function Topbar() {
               <User /> <Badge variant="secondary">{titleCase(user?.role ?? '')}</Badge>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => logout()} className="text-destructive focus:text-destructive">
+            <DropdownMenuItem onSelect={() => setShowLogoutConfirm(true)} className="text-destructive focus:text-destructive">
               <LogOut /> Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
     </header>
+
+    <Dialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
+      <DialogContent className="max-w-[360px] p-5 gap-3">
+        <DialogHeader className="space-y-1">
+          <DialogTitle className="text-lg">Confirm Sign Out</DialogTitle>
+          <DialogDescription className="text-sm">
+            Are you sure you want to sign out? You will need to log back in to access the workspace.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="mt-2 sm:flex-row sm:justify-end gap-2">
+          <Button variant="ghost" onClick={() => setShowLogoutConfirm(false)} className="h-9 px-4">
+            Cancel
+          </Button>
+          <Button variant="destructive" onClick={() => {
+            setShowLogoutConfirm(false);
+            logout();
+          }} className="h-9 px-4">
+            Sign out
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
