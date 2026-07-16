@@ -88,12 +88,14 @@ function StatCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, delay: index * 0.05 }}
     >
-      <Card>
+      <Card className="group relative overflow-hidden hover:shadow-lift">
+        {/* corner glow that wakes on hover */}
+        <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-primary/[0.06] blur-2xl transition-opacity duration-300 group-hover:opacity-100 lg:opacity-0" />
         <CardContent className="p-5">
           <div className="flex items-start justify-between">
             <div className="min-w-0">
               <p className="truncate text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</p>
-              <p className="mt-1.5 truncate text-2xl font-semibold tracking-tight">{value}</p>
+              <p className="mt-1.5 truncate font-display text-2xl font-bold tracking-tight tabular-nums">{value}</p>
               {sub && (
                 <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                   {positive === true && <ArrowUpRight className="h-3 w-3 text-success" />}
@@ -102,8 +104,8 @@ function StatCard({
                 </p>
               )}
             </div>
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent">
-              <Icon className="h-4.5 w-4.5 h-5 w-5 text-accent-foreground" />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-accent to-secondary shadow-soft ring-1 ring-border/60 transition-transform duration-200 group-hover:scale-110">
+              <Icon className="h-5 w-5 text-primary" />
             </div>
           </div>
         </CardContent>
@@ -126,15 +128,15 @@ function AlertPill({
   return (
     <Link
       href={href}
-      className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 shadow-sm transition-colors hover:bg-accent/50"
+      className="group flex items-center gap-3 rounded-xl border border-border/70 bg-card px-4 py-3 shadow-card transition-all duration-150 hover:-translate-y-0.5 hover:shadow-lift"
     >
-      <div className="flex h-8 w-8 items-center justify-center rounded-md bg-warning/15">
+      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-warning/15 ring-1 ring-warning/20 transition-transform duration-200 group-hover:scale-110">
         <Icon className="h-4 w-4 text-warning" />
       </div>
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-medium">{label}</div>
       </div>
-      <div className="text-lg font-semibold tabular-nums">{count}</div>
+      <div className="font-display text-lg font-bold tabular-nums">{count}</div>
     </Link>
   );
 }

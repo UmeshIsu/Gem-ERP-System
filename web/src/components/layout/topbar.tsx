@@ -91,7 +91,7 @@ export function Topbar() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search stones, certificates, sellers, buyers…"
-          className="pl-9"
+          className="rounded-full border-transparent bg-muted/50 pl-9 focus-visible:bg-card"
         />
       </form>
 

@@ -44,14 +44,15 @@ function StageIcon({ status }: { status: string }) {
   switch (status) {
     case 'COMPLETED':
       return (
-        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-success text-white">
+        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-success to-success/80 text-white shadow-soft ring-2 ring-success/20">
           <Check className="h-3.5 w-3.5" />
         </div>
       );
     case 'IN_PROGRESS':
       return (
-        <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-primary bg-accent text-primary">
-          <CircleDot className="h-3.5 w-3.5 animate-pulse" />
+        <div className="relative flex h-7 w-7 items-center justify-center rounded-full border-2 border-primary bg-accent text-primary shadow-glow">
+          <span className="absolute inset-0 animate-ping rounded-full bg-primary/20 [animation-duration:2s]" />
+          <CircleDot className="h-3.5 w-3.5" />
         </div>
       );
     case 'NOT_APPLICABLE':

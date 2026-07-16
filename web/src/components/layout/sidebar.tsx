@@ -64,13 +64,16 @@ export function Sidebar() {
   const { data: company } = useCompany();
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground lg:flex">
-      <div className="flex h-16 items-center gap-2.5 border-b border-sidebar-border px-5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-blue-400 to-blue-700 shadow-lg shadow-blue-900/40">
-          <Gem className="h-5 w-5 text-white" />
+    <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-sidebar-border bg-sidebar bg-gradient-to-b from-sidebar via-sidebar to-[hsl(222,50%,8%)] text-sidebar-foreground lg:flex">
+      {/* faint sapphire glow behind the brand block */}
+      <div className="pointer-events-none absolute -top-24 left-1/2 h-48 w-48 -translate-x-1/2 rounded-full bg-blue-500/15 blur-3xl" />
+
+      <div className="relative flex h-16 items-center gap-2.5 border-b border-sidebar-border/80 px-5">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-400 to-blue-700 shadow-lg shadow-blue-900/50 ring-1 ring-white/20">
+          <Gem className="h-5 w-5 text-white drop-shadow" />
         </div>
         <div className="min-w-0">
-          <div className="truncate text-sm font-bold tracking-wide text-white">
+          <div className="truncate font-display text-sm font-bold tracking-wide text-white">
             {company?.companyName ?? 'AURA GEM'}
           </div>
           <div className="text-[10px] font-medium uppercase tracking-widest text-sidebar-foreground/60">
@@ -96,13 +99,25 @@ export function Sidebar() {
                       key={item.href}
                       href={item.href}
                       className={cn(
-                        'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                        'group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150',
                         active
-                          ? 'bg-sidebar-accent text-white shadow-sm'
-                          : 'text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-white',
+                          ? 'bg-gradient-to-r from-blue-500/20 to-transparent text-white shadow-sm ring-1 ring-inset ring-blue-400/20'
+                          : 'text-sidebar-foreground/75 hover:translate-x-0.5 hover:bg-sidebar-accent/60 hover:text-white',
                       )}
                     >
-                      <item.icon className={cn('h-4 w-4', active ? 'text-blue-300' : '')} />
+                      {/* active indicator bar */}
+                      <span
+                        className={cn(
+                          'absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.8)] transition-opacity',
+                          active ? 'opacity-100' : 'opacity-0',
+                        )}
+                      />
+                      <item.icon
+                        className={cn(
+                          'h-4 w-4 transition-colors',
+                          active ? 'text-blue-300' : 'text-sidebar-foreground/60 group-hover:text-blue-200',
+                        )}
+                      />
                       {item.label}
                     </Link>
                   );

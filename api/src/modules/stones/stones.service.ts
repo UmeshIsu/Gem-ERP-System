@@ -194,6 +194,14 @@ export class StonesService {
     if (before.status === StoneStatus.SPLIT) {
       throw new BadRequestException('A split parent stone is archived and cannot be edited');
     }
+    // Once sold, the SaleRecord has frozen the cost & profit — editing the stone
+    // (e.g. purchaseCost) would make the stone detail and the reports disagree forever.
+    const sale = await this.prisma.saleRecord.findUnique({ where: { stoneId: id }, select: { id: true } });
+    if (sale) {
+      throw new BadRequestException(
+        'This stone has been sold — its details are frozen. The sale record preserves the final cost and profit, so they can no longer be edited.',
+      );
+    }
 
     const stone = await this.prisma.stone.update({
       where: { id },
@@ -207,8 +215,31 @@ export class StonesService {
     return this.findOne(id);
   }
 
+  /** Terminal statuses that must only be reached through their dedicated flows (which create the SaleRecord / SplitEvent and freeze the numbers). */
+  private static readonly FLOW_ONLY_STATUSES: StoneStatus[] = [
+    StoneStatus.EXPORTED,
+    StoneStatus.SOLD_LOCALLY,
+    StoneStatus.SPLIT,
+  ];
+
   async changeStatus(id: string, dto: ChangeStatusDto, userId: string) {
     const before = await this.prisma.stone.findUniqueOrThrow({ where: { id } });
+
+    if (StonesService.FLOW_ONLY_STATUSES.includes(dto.status)) {
+      throw new BadRequestException(
+        `"${dto.status}" is set automatically by the Export/Sale or Split process — use those flows so the sale/split record and profit are recorded correctly, not a manual status change.`,
+      );
+    }
+
+    // A stone that already has a frozen sale is locked (it is also archived by the sale flow).
+    const sale = await this.prisma.saleRecord.findUnique({ where: { stoneId: id }, select: { id: true } });
+    if (sale) {
+      throw new BadRequestException('This stone has been sold — its status is locked.');
+    }
+    if (before.status === StoneStatus.SPLIT) {
+      throw new BadRequestException('A split parent stone is archived and its status cannot be changed.');
+    }
+
     const stone = await this.prisma.stone.update({
       where: { id },
       data: { status: dto.status, isArchived: dto.status === StoneStatus.ARCHIVED ? true : before.isArchived },

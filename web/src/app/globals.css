@@ -106,6 +106,31 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    /* Ambient wash: a whisper of sapphire at the top of every page */
+    background-image:
+      radial-gradient(1100px 500px at 85% -10%, hsl(var(--primary) / 0.055), transparent 60%),
+      radial-gradient(900px 420px at -10% -5%, hsl(217 90% 60% / 0.045), transparent 55%);
+    background-attachment: fixed;
+  }
+
+  .dark body {
+    background-image:
+      radial-gradient(1100px 500px at 85% -10%, hsl(214 90% 62% / 0.07), transparent 60%),
+      radial-gradient(900px 420px at -10% -5%, hsl(262 60% 60% / 0.05), transparent 55%);
+  }
+
+  h1, h2, h3 {
+    @apply font-display;
+    letter-spacing: -0.02em;
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.18);
+  }
+
+  /* Number-heavy UI: keep digits aligned everywhere by default in tables */
+  tbody td {
+    font-variant-numeric: tabular-nums;
   }
 
   ::-webkit-scrollbar {

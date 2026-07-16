@@ -49,8 +49,19 @@ export default function LoginPage() {
     <div className="flex min-h-screen">
       {/* Brand panel */}
       <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-[hsl(219,52%,11%)] p-12 lg:flex">
-        <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-blue-600/20 blur-3xl" />
-        <div className="absolute -bottom-40 -right-20 h-[28rem] w-[28rem] rounded-full bg-indigo-500/15 blur-3xl" />
+        <div className="absolute -left-32 -top-32 h-96 w-96 animate-float rounded-full bg-blue-600/20 blur-3xl" />
+        <div className="absolute -bottom-40 -right-20 h-[28rem] w-[28rem] animate-float rounded-full bg-indigo-500/15 blur-3xl [animation-delay:-3.5s]" />
+        {/* faint blueprint grid for depth */}
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.35]"
+          style={{
+            backgroundImage:
+              'linear-gradient(rgba(148,180,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(148,180,255,0.05) 1px, transparent 1px)',
+            backgroundSize: '44px 44px',
+            maskImage: 'radial-gradient(ellipse 90% 70% at 50% 40%, black, transparent)',
+            WebkitMaskImage: 'radial-gradient(ellipse 90% 70% at 50% 40%, black, transparent)',
+          }}
+        />
 
         <div className="relative flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-blue-400 to-blue-700 shadow-xl shadow-blue-900/50">
