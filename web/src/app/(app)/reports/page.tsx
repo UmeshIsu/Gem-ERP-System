@@ -113,7 +113,7 @@ export default function ReportsPage() {
 
       <Card className="no-print mb-4">
         <CardContent className="flex flex-wrap items-end gap-4 p-4">
-          <div className="space-y-1.5">
+          <div className="flex flex-col space-y-1.5">
             <Label>Report</Label>
             <Select value={report} onValueChange={(v) => setReport(v as ReportKey)}>
               <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
@@ -125,7 +125,7 @@ export default function ReportsPage() {
             </Select>
           </div>
           {meta.period && (
-            <div className="space-y-1.5">
+            <div className="flex flex-col space-y-1.5">
               <Label>Month</Label>
               <MonthPicker value={month} onChange={setMonth} className="w-44" />
             </div>
