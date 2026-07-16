@@ -8,11 +8,11 @@ import { api } from '@/lib/api';
 import { money, formatDate, titleCase } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MonthPicker } from '@/components/ui/month-picker';
 import { PageHeader } from '@/components/shared/page-header';
 import { EmptyState } from '@/components/shared/empty-state';
 
@@ -127,7 +127,7 @@ export default function ReportsPage() {
           {meta.period && (
             <div className="space-y-1.5">
               <Label>Month</Label>
-              <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="w-44" />
+              <MonthPicker value={month} onChange={setMonth} className="w-44" />
             </div>
           )}
         </CardContent>
