@@ -74,6 +74,7 @@ function StatCard({
   icon: Icon,
   index,
   positive,
+  href,
 }: {
   title: string;
   value: string;
@@ -81,35 +82,40 @@ function StatCard({
   icon: React.ComponentType<{ className?: string }>;
   index: number;
   positive?: boolean;
+  href?: string;
 }) {
+  const cardContent = (
+    <Card className={`group relative overflow-hidden transition-all duration-150 ${href ? 'cursor-pointer hover:-translate-y-0.5 hover:shadow-lift hover:border-primary/40' : ''}`}>
+      {/* corner glow that wakes on hover */}
+      <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-primary/[0.06] blur-2xl transition-opacity duration-300 group-hover:opacity-100 lg:opacity-0" />
+      <CardContent className="p-5">
+        <div className="flex items-start justify-between">
+          <div className="min-w-0">
+            <p className="truncate text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</p>
+            <p className="mt-1.5 truncate font-display text-2xl font-bold tracking-tight tabular-nums">{value}</p>
+            {sub && (
+              <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                {positive === true && <ArrowUpRight className="h-3 w-3 text-success" />}
+                {positive === false && <ArrowDownRight className="h-3 w-3 text-destructive" />}
+                {sub}
+              </p>
+            )}
+          </div>
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-accent to-secondary shadow-soft ring-1 ring-border/60 transition-transform duration-200 group-hover:scale-110">
+            <Icon className="h-5 w-5 text-primary" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, delay: index * 0.05 }}
     >
-      <Card className="group relative overflow-hidden hover:shadow-lift">
-        {/* corner glow that wakes on hover */}
-        <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-primary/[0.06] blur-2xl transition-opacity duration-300 group-hover:opacity-100 lg:opacity-0" />
-        <CardContent className="p-5">
-          <div className="flex items-start justify-between">
-            <div className="min-w-0">
-              <p className="truncate text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</p>
-              <p className="mt-1.5 truncate font-display text-2xl font-bold tracking-tight tabular-nums">{value}</p>
-              {sub && (
-                <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                  {positive === true && <ArrowUpRight className="h-3 w-3 text-success" />}
-                  {positive === false && <ArrowDownRight className="h-3 w-3 text-destructive" />}
-                  {sub}
-                </p>
-              )}
-            </div>
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-accent to-secondary shadow-soft ring-1 ring-border/60 transition-transform duration-200 group-hover:scale-110">
-              <Icon className="h-5 w-5 text-primary" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {href ? <Link href={href}>{cardContent}</Link> : cardContent}
     </motion.div>
   );
 }
@@ -199,6 +205,15 @@ export default function DashboardPage() {
   const s = summary!;
   const c = charts!;
 
+  const getLocalDateString = (date: Date) => {
+    const offset = date.getTimezoneOffset();
+    const localDate = new Date(date.getTime() - offset * 60 * 1000);
+    return localDate.toISOString().split('T')[0];
+  };
+
+  const todayStr = getLocalDateString(new Date());
+  const startOfMonthStr = getLocalDateString(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -208,14 +223,14 @@ export default function DashboardPage() {
 
       {/* KPI tiles */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard index={0} title="Inventory Value" value={money(s.inventoryValue, true)} sub={`${s.inventoryCount} stones in stock`} icon={Gem} />
-        <StatCard index={1} title="Cash Investment" value={money(s.cashInvestment, true)} sub="capital in current inventory" icon={Wallet} />
-        <StatCard index={2} title="Monthly Sales" value={money(s.monthSales.total, true)} sub={`${s.monthSales.count} sales this month`} icon={TrendingUp} positive={s.monthSales.total > 0 ? true : undefined} />
-        <StatCard index={3} title="Monthly Profit" value={money(s.monthProfit, true)} sub="net, after all expenses" icon={ArrowUpRight} positive={s.monthProfit >= 0} />
-        <StatCard index={4} title="Today's Purchases" value={money(s.todayPurchases.total, true)} sub={`${s.todayPurchases.count} stones today`} icon={ShoppingBag} />
-        <StatCard index={5} title="Monthly Purchases" value={money(s.monthPurchases.total, true)} sub={`${s.monthPurchases.count} stones this month`} icon={Boxes} />
-        <StatCard index={6} title="Monthly Expenses" value={money(s.monthExpenses, true)} sub="stone costs + overheads" icon={Wallet} positive={false} />
-        <StatCard index={7} title="Inventory Quantity" value={s.inventoryCount.toLocaleString()} sub="active stones" icon={Gem} />
+        <StatCard index={0} title="Inventory Value" value={money(s.inventoryValue, true)} sub={`${s.inventoryCount} stones in stock`} icon={Gem} href="/inventory" />
+        <StatCard index={1} title="Cash Investment" value={money(s.cashInvestment, true)} sub="capital in current inventory" icon={Wallet} href="/financials" />
+        <StatCard index={2} title="Monthly Sales" value={money(s.monthSales.total, true)} sub={`${s.monthSales.count} sales this month`} icon={TrendingUp} positive={s.monthSales.total > 0 ? true : undefined} href="/exports" />
+        <StatCard index={3} title="Monthly Profit" value={money(s.monthProfit, true)} sub="net, after all expenses" icon={ArrowUpRight} positive={s.monthProfit >= 0} href="/financials" />
+        <StatCard index={4} title="Today's Purchases" value={money(s.todayPurchases.total, true)} sub={`${s.todayPurchases.count} stones today`} icon={ShoppingBag} href={`/inventory?purchasedFrom=${todayStr}&purchasedTo=${todayStr}`} />
+        <StatCard index={5} title="Monthly Purchases" value={money(s.monthPurchases.total, true)} sub={`${s.monthPurchases.count} stones this month`} icon={Boxes} href={`/inventory?purchasedFrom=${startOfMonthStr}&purchasedTo=${todayStr}`} />
+        <StatCard index={6} title="Monthly Expenses" value={money(s.monthExpenses, true)} sub="stone costs + overheads" icon={Wallet} positive={false} href="/financials" />
+        <StatCard index={7} title="Inventory Quantity" value={s.inventoryCount.toLocaleString()} sub="active stones" icon={Gem} href="/inventory" />
       </div>
 
       {/* Alerts */}
