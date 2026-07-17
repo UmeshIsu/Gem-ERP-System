@@ -31,15 +31,17 @@ function InventoryContent() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState(searchParams.get('search') ?? '');
   const [searchInput, setSearchInput] = useState(search);
-  const [status, setStatus] = useState(ALL);
-  const [gemTypeId, setGemTypeId] = useState(ALL);
-  const [locationId, setLocationId] = useState(ALL);
-  const [includeArchived, setIncludeArchived] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
-  const [minWeight, setMinWeight] = useState('');
-  const [maxWeight, setMaxWeight] = useState('');
-  const [purchasedFrom, setPurchasedFrom] = useState('');
-  const [purchasedTo, setPurchasedTo] = useState('');
+  const [status, setStatus] = useState(searchParams.get('status') ?? ALL);
+  const [gemTypeId, setGemTypeId] = useState(searchParams.get('gemTypeId') ?? ALL);
+  const [locationId, setLocationId] = useState(searchParams.get('locationId') ?? ALL);
+  const [includeArchived, setIncludeArchived] = useState(searchParams.get('includeArchived') === 'true');
+  const [showFilters, setShowFilters] = useState(
+    !!(searchParams.get('gemTypeId') || searchParams.get('locationId') || searchParams.get('purchasedFrom') || searchParams.get('purchasedTo'))
+  );
+  const [minWeight, setMinWeight] = useState(searchParams.get('minWeight') ?? '');
+  const [maxWeight, setMaxWeight] = useState(searchParams.get('maxWeight') ?? '');
+  const [purchasedFrom, setPurchasedFrom] = useState(searchParams.get('purchasedFrom') ?? '');
+  const [purchasedTo, setPurchasedTo] = useState(searchParams.get('purchasedTo') ?? '');
 
   const { data: gemTypes } = useMasterData('gemType');
   const { data: locations } = useMasterData('purchaseLocation');
