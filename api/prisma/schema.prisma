@@ -41,6 +41,7 @@ model User {
   createdStones    Stone[]           @relation("StoneCreatedBy")
   operatedBatches  TreatmentBatch[]  @relation("BatchOperator")
   stoneEvents      StoneEvent[]
+  notificationReads UserNotificationRead[]
 
   @@map("users")
 }
@@ -313,7 +314,7 @@ model Stone {
   cuttingRecords CuttingRecord[]
   certifications Certification[]
   batchLinks     TreatmentBatchStone[]
-  electricRun    ElectricTreatment?
+  electricRuns   ElectricTreatment[]
   saleRecord     SaleRecord?
   exportItems    ExportItem[]
   splitAsParent  SplitEvent? @relation("SplitParent")
@@ -487,7 +488,7 @@ enum ElectricStatus {
 
 model ElectricTreatment {
   id              String         @id @default(uuid())
-  stoneId         String         @unique
+  stoneId         String
   plannedWeeks    Int
   startDate       DateTime
   estimatedFinish DateTime?
@@ -500,6 +501,7 @@ model ElectricTreatment {
   stone Stone                @relation(fields: [stoneId], references: [id])
   logs  ElectricProgressLog[]
 
+  @@index([stoneId])
   @@map("electric_treatments")
 }
 
@@ -733,9 +735,24 @@ model Notification {
   createdAt DateTime         @default(now())
 
   user User? @relation(fields: [userId], references: [id])
+  reads UserNotificationRead[]
 
   @@index([userId, isRead])
   @@map("notifications")
+}
+
+model UserNotificationRead {
+  id             String   @id @default(uuid())
+  userId         String
+  notificationId String
+  readAt         DateTime @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, notificationId])
+  @@index([userId])
+  @@map("user_notification_reads")
 }
 
 /// Monotonic counters for human-readable codes (G0001, HT-2026-001, EXP-2026-001).
