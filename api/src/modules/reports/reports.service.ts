@@ -1,7 +1,7 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
-import { ShipmentStatus, StoneStatus } from '@prisma/client';
-import { endOfMonth, startOfMonth } from 'date-fns';
-import { PrismaService } from '../../prisma/prisma.service';
+import { BadRequestException, Injectable } from "@nestjs/common";
+import { ShipmentStatus } from "@prisma/client";
+import { endOfMonth, startOfMonth } from "date-fns";
+import { PrismaService } from "../../prisma/prisma.service";
 
 export interface ReportPeriod {
   from: Date;
@@ -14,8 +14,8 @@ export class ReportsService {
 
   parsePeriod(from?: string, to?: string, month?: string): ReportPeriod {
     if (month) {
-      const [y, m] = month.split('-').map(Number);
-      if (!y || !m) throw new BadRequestException('month must be YYYY-MM');
+      const [y, m] = month.split("-").map(Number);
+      if (!y || !m) throw new BadRequestException("month must be YYYY-MM");
       const d = new Date(y, m - 1, 1);
       return { from: startOfMonth(d), to: endOfMonth(d) };
     }
@@ -29,11 +29,17 @@ export class ReportsService {
   async incomeStatement(p: ReportPeriod) {
     const sales = await this.prisma.saleRecord.findMany({
       where: { saleDate: { gte: p.from, lte: p.to } },
-      include: { stone: { select: { code: true, gemType: { select: { name: true } } } }, buyer: true },
-      orderBy: { saleDate: 'asc' },
+      include: {
+        stone: { select: { code: true, gemType: { select: { name: true } } } },
+        buyer: true,
+      },
+      orderBy: { saleDate: "asc" },
     });
     const [stoneExpAgg, companyExp] = await Promise.all([
-      this.prisma.stoneExpense.aggregate({ where: { incurredAt: { gte: p.from, lte: p.to } }, _sum: { amount: true } }),
+      this.prisma.stoneExpense.aggregate({
+        where: { incurredAt: { gte: p.from, lte: p.to } },
+        _sum: { amount: true },
+      }),
       this.prisma.companyExpense.findMany({
         where: { incurredAt: { gte: p.from, lte: p.to } },
         include: { category: true },
@@ -61,7 +67,7 @@ export class ReportsService {
         date: r.saleDate,
         stoneCode: r.stone.code,
         gemType: r.stone.gemType.name,
-        buyer: r.buyer?.name ?? '—',
+        buyer: r.buyer?.name ?? "—",
         channel: r.channel,
         salePrice: Number(r.salePrice),
         totalCost: Number(r.totalCost),
@@ -82,12 +88,12 @@ export class ReportsService {
       this.prisma.stoneExpense.findMany({
         where: { incurredAt: { gte: p.from, lte: p.to } },
         include: { category: true, stone: { select: { code: true } } },
-        orderBy: { incurredAt: 'asc' },
+        orderBy: { incurredAt: "asc" },
       }),
       this.prisma.companyExpense.findMany({
         where: { incurredAt: { gte: p.from, lte: p.to } },
         include: { category: true },
-        orderBy: { incurredAt: 'asc' },
+        orderBy: { incurredAt: "asc" },
       }),
     ]);
 
@@ -102,19 +108,23 @@ export class ReportsService {
       ...companyExpenses.map((e) => ({
         date: e.incurredAt,
         category: e.category.name,
-        stoneCode: '—',
+        stoneCode: "—",
         amount: Number(e.amount),
         note: e.note,
       })),
     ].sort((a, b) => a.date.getTime() - b.date.getTime());
 
     const byCategory = new Map<string, number>();
-    for (const r of rows) byCategory.set(r.category, (byCategory.get(r.category) ?? 0) + r.amount);
+    for (const r of rows)
+      byCategory.set(r.category, (byCategory.get(r.category) ?? 0) + r.amount);
 
     return {
       period: p,
       total: rows.reduce((s, r) => s + r.amount, 0),
-      byCategory: [...byCategory.entries()].map(([category, amount]) => ({ category, amount })),
+      byCategory: [...byCategory.entries()].map(([category, amount]) => ({
+        category,
+        amount,
+      })),
       rows,
     };
   }
@@ -127,19 +137,22 @@ export class ReportsService {
         purchaseLocation: true,
         expenses: true,
       },
-      orderBy: { code: 'asc' },
+      orderBy: { code: "asc" },
     });
     return {
       generatedAt: new Date(),
       count: stones.length,
       totalPurchaseCost: stones.reduce((s, x) => s + Number(x.purchaseCost), 0),
-      totalCurrentValue: stones.reduce((s, x) => s + Number(x.currentValue ?? 0), 0),
+      totalCurrentValue: stones.reduce(
+        (s, x) => s + Number(x.currentValue ?? 0),
+        0,
+      ),
       rows: stones.map((s) => ({
         code: s.code,
         gemType: s.gemType.name,
         weightCt: Number(s.weightCt),
         status: s.status,
-        location: s.purchaseLocation?.name ?? '—',
+        location: s.purchaseLocation?.name ?? "—",
         purchaseDate: s.purchaseDate,
         purchaseCost: Number(s.purchaseCost),
         expenses: s.expenses.reduce((sum, e) => sum + Number(e.amount), 0),
@@ -152,7 +165,7 @@ export class ReportsService {
     const stones = await this.prisma.stone.findMany({
       where: { purchaseDate: { gte: p.from, lte: p.to }, parentId: null },
       include: { gemType: true, purchaseLocation: true, seller: true },
-      orderBy: { purchaseDate: 'asc' },
+      orderBy: { purchaseDate: "asc" },
     });
     return {
       period: p,
@@ -163,8 +176,8 @@ export class ReportsService {
         code: s.code,
         gemType: s.gemType.name,
         weightCt: Number(s.weightCt),
-        location: s.purchaseLocation?.name ?? '—',
-        seller: s.seller?.name ?? '—',
+        location: s.purchaseLocation?.name ?? "—",
+        seller: s.seller?.name ?? "—",
         cost: Number(s.purchaseCost),
       })),
     };
@@ -173,8 +186,12 @@ export class ReportsService {
   async treatmentReport(p: ReportPeriod) {
     const batches = await this.prisma.treatmentBatch.findMany({
       where: { createdAt: { gte: p.from, lte: p.to } },
-      include: { machine: true, operator: { select: { fullName: true } }, stones: { include: { stone: { select: { code: true } } } } },
-      orderBy: { createdAt: 'asc' },
+      include: {
+        machine: true,
+        operator: { select: { fullName: true } },
+        stones: { include: { stone: { select: { code: true } } } },
+      },
+      orderBy: { createdAt: "asc" },
     });
     return {
       period: p,
@@ -183,13 +200,13 @@ export class ReportsService {
         batchCode: b.batchCode,
         type: b.type,
         machine: b.machine.name,
-        operator: b.operator?.fullName ?? '—',
+        operator: b.operator?.fullName ?? "—",
         status: b.status,
         temperatureC: b.temperatureC,
         durationHours: b.durationHours,
         startAt: b.startAt,
         actualEndAt: b.actualEndAt,
-        stones: b.stones.map((s) => s.stone.code).join(', '),
+        stones: b.stones.map((s) => s.stone.code).join(", "),
       })),
     };
   }
@@ -200,8 +217,11 @@ export class ReportsService {
         exportDate: { gte: p.from, lte: p.to },
         status: { in: [ShipmentStatus.SHIPPED, ShipmentStatus.DELIVERED] },
       },
-      include: { buyer: true, items: { include: { stone: { select: { code: true } } } } },
-      orderBy: { exportDate: 'asc' },
+      include: {
+        buyer: true,
+        items: { include: { stone: { select: { code: true } } } },
+      },
+      orderBy: { exportDate: "asc" },
     });
     return {
       period: p,
@@ -212,9 +232,9 @@ export class ReportsService {
         shipmentCode: s.shipmentCode,
         buyer: s.buyer.name,
         country: s.country,
-        courier: s.courier ?? '—',
-        trackingNumber: s.trackingNumber ?? '—',
-        stones: s.items.map((i) => i.stone.code).join(', '),
+        courier: s.courier ?? "—",
+        trackingNumber: s.trackingNumber ?? "—",
+        stones: s.items.map((i) => i.stone.code).join(", "),
         value: Number(s.exportValue),
       })),
     };
@@ -223,8 +243,11 @@ export class ReportsService {
   async profitReport(p: ReportPeriod) {
     const sales = await this.prisma.saleRecord.findMany({
       where: { saleDate: { gte: p.from, lte: p.to } },
-      include: { stone: { include: { gemType: true, purchaseLocation: true } }, buyer: true },
-      orderBy: { netProfit: 'desc' },
+      include: {
+        stone: { include: { gemType: true, purchaseLocation: true } },
+        buyer: true,
+      },
+      orderBy: { netProfit: "desc" },
     });
     return {
       period: p,
@@ -233,8 +256,8 @@ export class ReportsService {
       rows: sales.map((r) => ({
         stoneCode: r.stone.code,
         gemType: r.stone.gemType.name,
-        location: r.stone.purchaseLocation?.name ?? '—',
-        buyer: r.buyer?.name ?? '—',
+        location: r.stone.purchaseLocation?.name ?? "—",
+        buyer: r.buyer?.name ?? "—",
         channel: r.channel,
         saleDate: r.saleDate,
         salePrice: Number(r.salePrice),
@@ -248,15 +271,25 @@ export class ReportsService {
   }
 
   async cashFlowReport(p: ReportPeriod) {
-    const [sales, purchases, stoneExpenses, companyExpenses] = await Promise.all([
-      this.prisma.saleRecord.findMany({ where: { saleDate: { gte: p.from, lte: p.to } }, select: { saleDate: true, salePrice: true } }),
-      this.prisma.stone.findMany({
-        where: { purchaseDate: { gte: p.from, lte: p.to }, parentId: null },
-        select: { purchaseDate: true, purchaseCost: true },
-      }),
-      this.prisma.stoneExpense.findMany({ where: { incurredAt: { gte: p.from, lte: p.to } }, select: { incurredAt: true, amount: true } }),
-      this.prisma.companyExpense.findMany({ where: { incurredAt: { gte: p.from, lte: p.to } }, select: { incurredAt: true, amount: true } }),
-    ]);
+    const [sales, purchases, stoneExpenses, companyExpenses] =
+      await Promise.all([
+        this.prisma.saleRecord.findMany({
+          where: { saleDate: { gte: p.from, lte: p.to } },
+          select: { saleDate: true, salePrice: true },
+        }),
+        this.prisma.stone.findMany({
+          where: { purchaseDate: { gte: p.from, lte: p.to }, parentId: null },
+          select: { purchaseDate: true, purchaseCost: true },
+        }),
+        this.prisma.stoneExpense.findMany({
+          where: { incurredAt: { gte: p.from, lte: p.to } },
+          select: { incurredAt: true, amount: true },
+        }),
+        this.prisma.companyExpense.findMany({
+          where: { incurredAt: { gte: p.from, lte: p.to } },
+          select: { incurredAt: true, amount: true },
+        }),
+      ]);
     const inflows = sales.reduce((s, r) => s + Number(r.salePrice), 0);
     const outflows =
       purchases.reduce((s, r) => s + Number(r.purchaseCost), 0) +
@@ -280,10 +313,27 @@ export class ReportsService {
     const stones = await this.prisma.stone.findMany({
       include: { gemType: true, saleRecord: true },
     });
-    const map = new Map<string, { gemType: string; inStock: number; stockValue: number; sold: number; revenue: number; profit: number }>();
+    const map = new Map<
+      string,
+      {
+        gemType: string;
+        inStock: number;
+        stockValue: number;
+        sold: number;
+        revenue: number;
+        profit: number;
+      }
+    >();
     for (const s of stones) {
       const key = s.gemType.name;
-      const cur = map.get(key) ?? { gemType: key, inStock: 0, stockValue: 0, sold: 0, revenue: 0, profit: 0 };
+      const cur = map.get(key) ?? {
+        gemType: key,
+        inStock: 0,
+        stockValue: 0,
+        sold: 0,
+        revenue: 0,
+        profit: 0,
+      };
       if (s.saleRecord) {
         cur.sold += 1;
         cur.revenue += Number(s.saleRecord.salePrice);
@@ -294,26 +344,63 @@ export class ReportsService {
       }
       map.set(key, cur);
     }
-    return { generatedAt: new Date(), rows: [...map.values()].sort((a, b) => b.revenue - a.revenue) };
+    return {
+      generatedAt: new Date(),
+      rows: [...map.values()].sort((a, b) => b.revenue - a.revenue),
+    };
   }
 
   async locationReport() {
-    const stones = await this.prisma.stone.findMany({
+    const originalStones = await this.prisma.stone.findMany({
       where: { parentId: null },
-      include: { purchaseLocation: true, saleRecord: true },
+      include: { purchaseLocation: true },
     });
-    const map = new Map<string, { location: string; purchases: number; invested: number; sold: number; profit: number }>();
-    for (const s of stones) {
-      const key = s.purchaseLocation?.name ?? 'Unknown';
-      const cur = map.get(key) ?? { location: key, purchases: 0, invested: 0, sold: 0, profit: 0 };
+    const sales = await this.prisma.saleRecord.findMany({
+      include: { stone: { include: { purchaseLocation: true } } },
+    });
+
+    const map = new Map<
+      string,
+      {
+        location: string;
+        purchases: number;
+        invested: number;
+        sold: number;
+        profit: number;
+      }
+    >();
+
+    for (const s of originalStones) {
+      const key = s.purchaseLocation?.name ?? "Unknown";
+      const cur = map.get(key) ?? {
+        location: key,
+        purchases: 0,
+        invested: 0,
+        sold: 0,
+        profit: 0,
+      };
       cur.purchases += 1;
       cur.invested += Number(s.purchaseCost);
-      if (s.saleRecord) {
-        cur.sold += 1;
-        cur.profit += Number(s.saleRecord.netProfit);
-      }
       map.set(key, cur);
     }
-    return { generatedAt: new Date(), rows: [...map.values()].sort((a, b) => b.invested - a.invested) };
+
+    for (const r of sales) {
+      const key = r.stone.purchaseLocation?.name ?? "Unknown";
+      const cur = map.get(key) ?? {
+        location: key,
+        purchases: 0,
+        invested: 0,
+        sold: 0,
+        profit: 0,
+      };
+      cur.sold += 1;
+      cur.profit += Number(r.netProfit);
+      map.set(key, cur);
+    }
+
+    return {
+      generatedAt: new Date(),
+      rows: [...map.values()].sort((a, b) => b.invested - a.invested),
+    };
   }
 }
