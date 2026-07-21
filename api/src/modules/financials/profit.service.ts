@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
-import { PrismaService } from '../../prisma/prisma.service';
+import { Injectable } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
+import { PrismaService } from "../../prisma/prisma.service";
 
 export interface StoneFinancials {
   purchaseCost: number;
@@ -15,7 +15,8 @@ export interface StoneFinancials {
   roi: number | null;
 }
 
-const D = (v: Prisma.Decimal | number | null | undefined) => (v == null ? null : Number(v));
+const D = (v: Prisma.Decimal | number | null | undefined) =>
+  v == null ? null : Number(v);
 
 @Injectable()
 export class ProfitService {
@@ -24,11 +25,16 @@ export class ProfitService {
   async computeForStone(stoneId: string): Promise<StoneFinancials> {
     const stone = await this.prisma.stone.findUniqueOrThrow({
       where: { id: stoneId },
-      select: { purchaseCost: true, currentValue: true, salePrice: true, saleRecord: true },
+      select: {
+        purchaseCost: true,
+        currentValue: true,
+        salePrice: true,
+        saleRecord: true,
+      },
     });
 
     const grouped = await this.prisma.stoneExpense.groupBy({
-      by: ['categoryId'],
+      by: ["categoryId"],
       where: { stoneId },
       _sum: { amount: true },
     });
@@ -36,7 +42,8 @@ export class ProfitService {
       where: { id: { in: grouped.map((g) => g.categoryId) } },
     });
     const expensesByCategory = grouped.map((g) => ({
-      category: categories.find((c) => c.id === g.categoryId)?.name ?? 'Unknown',
+      category:
+        categories.find((c) => c.id === g.categoryId)?.name ?? "Unknown",
       amount: Number(g._sum.amount ?? 0),
     }));
 
@@ -57,16 +64,31 @@ export class ProfitService {
       salePrice,
       grossProfit,
       netProfit,
-      profitPct: netProfit != null && totalInvestment > 0 ? +((netProfit / totalInvestment) * 100).toFixed(2) : null,
-      roi: netProfit != null && totalInvestment > 0 ? +((netProfit / totalInvestment) * 100).toFixed(2) : null,
+      profitPct:
+        netProfit != null && salePrice !== null && salePrice > 0
+          ? +((netProfit / salePrice) * 100).toFixed(2)
+          : null,
+      roi:
+        netProfit != null && totalInvestment > 0
+          ? +((netProfit / totalInvestment) * 100).toFixed(2)
+          : null,
     };
   }
 
   /** Total cost basis (purchase + expenses) — used when freezing a SaleRecord. */
-  async totalCost(stoneId: string, tx?: Prisma.TransactionClient): Promise<number> {
+  async totalCost(
+    stoneId: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<number> {
     const db = tx ?? this.prisma;
-    const stone = await db.stone.findUniqueOrThrow({ where: { id: stoneId }, select: { purchaseCost: true } });
-    const agg = await db.stoneExpense.aggregate({ where: { stoneId }, _sum: { amount: true } });
+    const stone = await db.stone.findUniqueOrThrow({
+      where: { id: stoneId },
+      select: { purchaseCost: true },
+    });
+    const agg = await db.stoneExpense.aggregate({
+      where: { stoneId },
+      _sum: { amount: true },
+    });
     return Number(stone.purchaseCost) + Number(agg._sum.amount ?? 0);
   }
 }
