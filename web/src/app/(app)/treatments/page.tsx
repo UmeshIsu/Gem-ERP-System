@@ -165,7 +165,7 @@ function ElectricProgressDialog({ run }: { run: any }) {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => submit(true)} disabled={submitting}>Log & Complete</Button>
+          <Button variant="outline" onClick={() => submit(true)} loading={submitting}>Log & Complete</Button>
           <Button onClick={() => submit(false)} loading={submitting}>Log Progress</Button>
         </DialogFooter>
       </DialogContent>
