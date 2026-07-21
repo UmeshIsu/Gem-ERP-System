@@ -433,8 +433,8 @@ export default function DashboardPage() {
                 className="flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors hover:bg-accent/50"
               >
                 <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent font-mono text-xs font-bold text-accent-foreground">
-                    {st.code.slice(0, 5)}
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent font-mono text-[10px] font-bold text-accent-foreground">
+                    {st.code}
                   </div>
                   <div>
                     <div className="text-sm font-medium">
