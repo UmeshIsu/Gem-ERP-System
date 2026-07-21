@@ -43,6 +43,11 @@ function InventoryContent() {
   const [purchasedFrom, setPurchasedFrom] = useState(searchParams.get('purchasedFrom') ?? '');
   const [purchasedTo, setPurchasedTo] = useState(searchParams.get('purchasedTo') ?? '');
 
+  const [minWeightInput, setMinWeightInput] = useState(minWeight);
+  const [maxWeightInput, setMaxWeightInput] = useState(maxWeight);
+  const [purchasedFromInput, setPurchasedFromInput] = useState(purchasedFrom);
+  const [purchasedToInput, setPurchasedToInput] = useState(purchasedTo);
+
   const { data: gemTypes } = useMasterData('gemType');
   const { data: locations } = useMasterData('purchaseLocation');
 
@@ -71,10 +76,22 @@ function InventoryContent() {
     setPage(1);
   };
 
+  const applyFilters = () => {
+    setMinWeight(minWeightInput);
+    setMaxWeight(maxWeightInput);
+    setPurchasedFrom(purchasedFromInput);
+    setPurchasedTo(purchasedToInput);
+    setPage(1);
+  };
+
   const clearFilters = () => {
     setStatus(ALL);
     setGemTypeId(ALL);
     setLocationId(ALL);
+    setMinWeightInput('');
+    setMaxWeightInput('');
+    setPurchasedFromInput('');
+    setPurchasedToInput('');
     setMinWeight('');
     setMaxWeight('');
     setPurchasedFrom('');
@@ -168,26 +185,36 @@ function InventoryContent() {
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Weight (ct)</label>
                 <div className="flex items-center gap-2">
-                  <Input type="number" step="0.001" placeholder="Min" value={minWeight} onChange={(e) => setMinWeight(e.target.value)} />
-                  <Input type="number" step="0.001" placeholder="Max" value={maxWeight} onChange={(e) => setMaxWeight(e.target.value)} />
+                  <Input type="number" step="0.001" placeholder="Min" value={minWeightInput} onChange={(e) => setMinWeightInput(e.target.value)} />
+                  <Input type="number" step="0.001" placeholder="Max" value={maxWeightInput} onChange={(e) => setMaxWeightInput(e.target.value)} />
                 </div>
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Purchase Date</label>
                 <div className="flex items-center gap-2">
-                  <Input type="date" value={purchasedFrom} onChange={(e) => setPurchasedFrom(e.target.value)} />
-                  <Input type="date" value={purchasedTo} onChange={(e) => setPurchasedTo(e.target.value)} />
+                  <Input type="date" value={purchasedFromInput} onChange={(e) => setPurchasedFromInput(e.target.value)} />
+                  <Input type="date" value={purchasedToInput} onChange={(e) => setPurchasedToInput(e.target.value)} />
                 </div>
               </div>
-              <label className="flex items-center gap-2 text-sm sm:col-span-2">
-                <input
-                  type="checkbox"
-                  checked={includeArchived}
-                  onChange={(e) => { setIncludeArchived(e.target.checked); setPage(1); }}
-                  className="h-4 w-4 rounded border-input"
-                />
-                Include archived stones (split parents, exported, sold)
-              </label>
+              <div className="flex flex-col justify-end sm:col-span-2">
+                <label className="flex items-center gap-2 text-sm mb-2">
+                  <input
+                    type="checkbox"
+                    checked={includeArchived}
+                    onChange={(e) => { setIncludeArchived(e.target.checked); setPage(1); }}
+                    className="h-4 w-4 rounded border-input"
+                  />
+                  Include archived stones (split parents, exported, sold)
+                </label>
+              </div>
+              <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-4 justify-end">
+                <Button variant="outline" size="sm" onClick={clearFilters}>
+                  Clear Filters
+                </Button>
+                <Button size="sm" onClick={applyFilters}>
+                  Apply Filters
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
