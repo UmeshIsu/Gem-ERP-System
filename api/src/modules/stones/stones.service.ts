@@ -1,10 +1,10 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
-import { Prisma, StoneStatus } from '@prisma/client';
-import { PrismaService } from '../../prisma/prisma.service';
-import { AuditService } from '../audit/audit.service';
-import { WorkflowService } from '../workflow/workflow.service';
-import { ProfitService } from '../financials/profit.service';
-import { paginate } from '../../common/dto/pagination.dto';
+import { BadRequestException, Injectable } from "@nestjs/common";
+import { Prisma, StoneStatus } from "@prisma/client";
+import { PrismaService } from "../../prisma/prisma.service";
+import { AuditService } from "../audit/audit.service";
+import { WorkflowService } from "../workflow/workflow.service";
+import { ProfitService } from "../financials/profit.service";
+import { paginate } from "../../common/dto/pagination.dto";
 import {
   AddDocumentDto,
   AddImageDto,
@@ -12,7 +12,7 @@ import {
   CreateStoneDto,
   StoneQueryDto,
   UpdateStoneDto,
-} from './dto/stone.dto';
+} from "./dto/stone.dto";
 
 const listInclude = {
   gemType: true,
@@ -33,8 +33,8 @@ export class StonesService {
 
   /** G0001, G0002 … zero-padded, atomic. */
   private async nextStoneCode(): Promise<string> {
-    const n = await this.prisma.nextCounter('stone');
-    return `G${String(n).padStart(4, '0')}`;
+    const n = await this.prisma.nextCounter("stone");
+    return `G${String(n).padStart(4, "0")}`;
   }
 
   async create(dto: CreateStoneDto, userId: string) {
@@ -55,7 +55,7 @@ export class StonesService {
           dimensions: dto.dimensions,
           color: dto.color,
           clarity: dto.clarity,
-          origin: dto.origin ?? 'Sri Lanka',
+          origin: dto.origin ?? "Sri Lanka",
           purchaseDate: new Date(dto.purchaseDate),
           purchaseCost: dto.purchaseCost,
           currentValue: dto.currentValue ?? dto.purchaseCost,
@@ -64,15 +64,20 @@ export class StonesService {
         },
       });
 
-      await this.workflow.buildStagePlan(tx, created.id, dto.workflowTemplateId, dto.skipStages ?? []);
+      await this.workflow.buildStagePlan(
+        tx,
+        created.id,
+        dto.workflowTemplateId,
+        dto.skipStages ?? [],
+      );
 
       await tx.stoneEvent.create({
         data: {
           stoneId: created.id,
           userId,
-          kind: 'STONE_CREATED',
-          stage: 'PURCHASE',
-          title: 'Stone purchased',
+          kind: "STONE_CREATED",
+          stage: "PURCHASE",
+          title: "Stone purchased",
           detail: `Purchased for LKR ${dto.purchaseCost.toLocaleString()} (${dto.weightCt} ct)`,
         },
       });
@@ -80,7 +85,13 @@ export class StonesService {
       return created;
     });
 
-    await this.audit.log({ userId, action: 'CREATE', entity: 'Stone', entityId: stone.id, after: stone });
+    await this.audit.log({
+      userId,
+      action: "CREATE",
+      entity: "Stone",
+      entityId: stone.id,
+      after: stone,
+    });
     return this.findOne(stone.id);
   }
 
@@ -113,23 +124,46 @@ export class StonesService {
       }),
       ...(q.search && {
         OR: [
-          { code: { contains: q.search, mode: 'insensitive' as const } },
-          { color: { contains: q.search, mode: 'insensitive' as const } },
-          { notes: { contains: q.search, mode: 'insensitive' as const } },
-          { origin: { contains: q.search, mode: 'insensitive' as const } },
-          { gemType: { name: { contains: q.search, mode: 'insensitive' as const } } },
-          { seller: { name: { contains: q.search, mode: 'insensitive' as const } } },
-          { certifications: { some: { certificateNumber: { contains: q.search, mode: 'insensitive' as const } } } },
+          { code: { contains: q.search, mode: "insensitive" as const } },
+          { color: { contains: q.search, mode: "insensitive" as const } },
+          { notes: { contains: q.search, mode: "insensitive" as const } },
+          { origin: { contains: q.search, mode: "insensitive" as const } },
+          {
+            gemType: {
+              name: { contains: q.search, mode: "insensitive" as const },
+            },
+          },
+          {
+            seller: {
+              name: { contains: q.search, mode: "insensitive" as const },
+            },
+          },
+          {
+            certifications: {
+              some: {
+                certificateNumber: {
+                  contains: q.search,
+                  mode: "insensitive" as const,
+                },
+              },
+            },
+          },
         ],
       }),
     };
 
     const orderBy: Prisma.StoneOrderByWithRelationInput = q.sortBy
       ? { [q.sortBy]: q.sortOrder }
-      : { createdAt: 'desc' };
+      : { createdAt: "desc" };
 
     const [data, total] = await Promise.all([
-      this.prisma.stone.findMany({ where, include: listInclude, orderBy, skip: q.skip, take: q.limit }),
+      this.prisma.stone.findMany({
+        where,
+        include: listInclude,
+        orderBy,
+        skip: q.skip,
+        take: q.limit,
+      }),
       this.prisma.stone.count({ where }),
     ]);
 
@@ -145,32 +179,56 @@ export class StonesService {
         seller: true,
         workflowTemplate: true,
         createdBy: { select: { id: true, fullName: true } },
-        parent: { select: { id: true, code: true, weightCt: true, status: true } },
-        children: { select: { id: true, code: true, weightCt: true, status: true, purchaseCost: true, currentValue: true } },
-        stages: { orderBy: { sortOrder: 'asc' } },
-        images: { orderBy: [{ stage: 'asc' }, { sortOrder: 'asc' }] },
+        parent: {
+          select: { id: true, code: true, weightCt: true, status: true },
+        },
+        children: {
+          select: {
+            id: true,
+            code: true,
+            weightCt: true,
+            status: true,
+            purchaseCost: true,
+            currentValue: true,
+          },
+        },
+        stages: { orderBy: { sortOrder: "asc" } },
+        images: { orderBy: [{ stage: "asc" }, { sortOrder: "asc" }] },
         documents: true,
-        expenses: { include: { category: true }, orderBy: { incurredAt: 'desc' } },
-        cuttingRecords: { orderBy: { cuttingDate: 'desc' } },
+        expenses: {
+          include: { category: true },
+          orderBy: { incurredAt: "desc" },
+        },
+        cuttingRecords: { orderBy: { cuttingDate: "desc" } },
         certifications: { include: { laboratory: true } },
         batchLinks: { include: { batch: { include: { machine: true } } } },
-        electricRun: { include: { logs: { orderBy: { weekNumber: 'asc' } } } },
+        electricRuns: { include: { logs: { orderBy: { weekNumber: "asc" } } } },
         saleRecord: { include: { buyer: true } },
         exportItems: { include: { shipment: { include: { buyer: true } } } },
       },
     });
 
     const financials = await this.profit.computeForStone(id);
-    return { ...stone, financials };
+    const { electricRuns, ...rest } = stone;
+    const activeElectricRun =
+      electricRuns.find(
+        (r) => r.status === "RUNNING" || r.status === "PAUSED",
+      ) ??
+      electricRuns[0] ??
+      null;
+    return { ...rest, electricRun: activeElectricRun, financials };
   }
 
   async getTimeline(id: string) {
     const [stages, events] = await Promise.all([
-      this.prisma.stoneStage.findMany({ where: { stoneId: id }, orderBy: { sortOrder: 'asc' } }),
+      this.prisma.stoneStage.findMany({
+        where: { stoneId: id },
+        orderBy: { sortOrder: "asc" },
+      }),
       this.prisma.stoneEvent.findMany({
         where: { stoneId: id },
         include: { user: { select: { id: true, fullName: true } } },
-        orderBy: { createdAt: 'asc' },
+        orderBy: { createdAt: "asc" },
       }),
     ]);
     return { stages, events };
@@ -180,10 +238,20 @@ export class StonesService {
   async getCodes(id: string) {
     const stone = await this.prisma.stone.findUniqueOrThrow({
       where: { id },
-      select: { id: true, code: true, weightCt: true, gemType: { select: { name: true } } },
+      select: {
+        id: true,
+        code: true,
+        weightCt: true,
+        gemType: { select: { name: true } },
+      },
     });
     return {
-      qrPayload: JSON.stringify({ v: 1, t: 'AURA_STONE', code: stone.code, id: stone.id }),
+      qrPayload: JSON.stringify({
+        v: 1,
+        t: "AURA_STONE",
+        code: stone.code,
+        id: stone.id,
+      }),
       barcodePayload: stone.code,
       label: `${stone.code} · ${stone.gemType.name} · ${stone.weightCt} ct`,
     };
@@ -192,14 +260,19 @@ export class StonesService {
   async update(id: string, dto: UpdateStoneDto, userId: string) {
     const before = await this.prisma.stone.findUniqueOrThrow({ where: { id } });
     if (before.status === StoneStatus.SPLIT) {
-      throw new BadRequestException('A split parent stone is archived and cannot be edited');
+      throw new BadRequestException(
+        "A split parent stone is archived and cannot be edited",
+      );
     }
     // Once sold, the SaleRecord has frozen the cost & profit — editing the stone
     // (e.g. purchaseCost) would make the stone detail and the reports disagree forever.
-    const sale = await this.prisma.saleRecord.findUnique({ where: { stoneId: id }, select: { id: true } });
+    const sale = await this.prisma.saleRecord.findUnique({
+      where: { stoneId: id },
+      select: { id: true },
+    });
     if (sale) {
       throw new BadRequestException(
-        'This stone has been sold — its details are frozen. The sale record preserves the final cost and profit, so they can no longer be edited.',
+        "This stone has been sold — its details are frozen. The sale record preserves the final cost and profit, so they can no longer be edited.",
       );
     }
 
@@ -211,7 +284,14 @@ export class StonesService {
       },
     });
 
-    await this.audit.log({ userId, action: 'UPDATE', entity: 'Stone', entityId: id, before, after: stone });
+    await this.audit.log({
+      userId,
+      action: "UPDATE",
+      entity: "Stone",
+      entityId: id,
+      before,
+      after: stone,
+    });
     return this.findOne(id);
   }
 
@@ -232,31 +312,46 @@ export class StonesService {
     }
 
     // A stone that already has a frozen sale is locked (it is also archived by the sale flow).
-    const sale = await this.prisma.saleRecord.findUnique({ where: { stoneId: id }, select: { id: true } });
+    const sale = await this.prisma.saleRecord.findUnique({
+      where: { stoneId: id },
+      select: { id: true },
+    });
     if (sale) {
-      throw new BadRequestException('This stone has been sold — its status is locked.');
+      throw new BadRequestException(
+        "This stone has been sold — its status is locked.",
+      );
     }
     if (before.status === StoneStatus.SPLIT) {
-      throw new BadRequestException('A split parent stone is archived and its status cannot be changed.');
+      throw new BadRequestException(
+        "A split parent stone is archived and its status cannot be changed.",
+      );
     }
 
     const stone = await this.prisma.stone.update({
       where: { id },
-      data: { status: dto.status, isArchived: dto.status === StoneStatus.ARCHIVED ? true : before.isArchived },
+      data: {
+        status: dto.status,
+        isArchived:
+          dto.status === StoneStatus.ARCHIVED
+            ? true
+            : before.status === StoneStatus.ARCHIVED
+              ? false
+              : before.isArchived,
+      },
     });
     await this.prisma.stoneEvent.create({
       data: {
         stoneId: id,
         userId,
-        kind: 'STATUS_CHANGED',
+        kind: "STATUS_CHANGED",
         title: `Status changed: ${before.status} → ${dto.status}`,
         detail: dto.note,
       },
     });
     await this.audit.log({
       userId,
-      action: 'STATUS_CHANGE',
-      entity: 'Stone',
+      action: "STATUS_CHANGE",
+      entity: "Stone",
       entityId: id,
       before: { status: before.status },
       after: { status: dto.status },
@@ -266,31 +361,60 @@ export class StonesService {
 
   /** Stones are archived, never deleted. */
   async archive(id: string, userId: string) {
-    return this.changeStatus(id, { status: StoneStatus.ARCHIVED, note: 'Archived' }, userId);
+    return this.changeStatus(
+      id,
+      { status: StoneStatus.ARCHIVED, note: "Archived" },
+      userId,
+    );
   }
 
   // ── Media ───────────────────────────────────────────────
 
   async addImage(stoneId: string, dto: AddImageDto, userId: string) {
-    const count = await this.prisma.stoneImage.count({ where: { stoneId, stage: dto.stage } });
+    const count = await this.prisma.stoneImage.count({
+      where: { stoneId, stage: dto.stage },
+    });
     const image = await this.prisma.stoneImage.create({
       data: { stoneId, ...dto, sortOrder: count },
     });
-    await this.audit.log({ userId, action: 'ADD_IMAGE', entity: 'Stone', entityId: stoneId, after: image });
+    await this.audit.log({
+      userId,
+      action: "ADD_IMAGE",
+      entity: "Stone",
+      entityId: stoneId,
+      after: image,
+    });
     return image;
   }
 
   async removeImage(stoneId: string, imageId: string, userId: string) {
-    const image = await this.prisma.stoneImage.findUniqueOrThrow({ where: { id: imageId } });
-    if (image.stoneId !== stoneId) throw new BadRequestException('Image does not belong to this stone');
+    const image = await this.prisma.stoneImage.findUniqueOrThrow({
+      where: { id: imageId },
+    });
+    if (image.stoneId !== stoneId)
+      throw new BadRequestException("Image does not belong to this stone");
     await this.prisma.stoneImage.delete({ where: { id: imageId } });
-    await this.audit.log({ userId, action: 'REMOVE_IMAGE', entity: 'Stone', entityId: stoneId, before: image });
+    await this.audit.log({
+      userId,
+      action: "REMOVE_IMAGE",
+      entity: "Stone",
+      entityId: stoneId,
+      before: image,
+    });
     return { success: true };
   }
 
   async addDocument(stoneId: string, dto: AddDocumentDto, userId: string) {
-    const doc = await this.prisma.stoneDocument.create({ data: { stoneId, ...dto } });
-    await this.audit.log({ userId, action: 'ADD_DOCUMENT', entity: 'Stone', entityId: stoneId, after: doc });
+    const doc = await this.prisma.stoneDocument.create({
+      data: { stoneId, ...dto },
+    });
+    await this.audit.log({
+      userId,
+      action: "ADD_DOCUMENT",
+      entity: "Stone",
+      entityId: stoneId,
+      after: doc,
+    });
     return doc;
   }
 }
