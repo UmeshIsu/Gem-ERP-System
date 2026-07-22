@@ -10,7 +10,7 @@
 
 | Thing | Value |
 |-------|-------|
-| **Type** | PostgreSQL 16 (a professional, free, open-source database) |
+| **Type** | PostgreSQL 16 (a pofessional, free, open-source database) |
 | **Where it runs** | Inside Docker — the container named **`aura-db`** (you saw it in Docker Desktop) |
 | **Database name** | `aura_gem_erp` |
 | **Username** | `aura` |
