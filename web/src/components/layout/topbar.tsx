@@ -169,7 +169,7 @@ export function Topbar() {
               <User /> <Badge variant="secondary">{titleCase(user?.role ?? '')}</Badge>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => setShowLogoutConfirm(true)} className="text-destructive focus:text-destructive">
+            <DropdownMenuItem onSelect={() => setShowLogoutConfirm(true)}>
               <LogOut /> Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -189,7 +189,7 @@ export function Topbar() {
           <Button variant="ghost" onClick={() => setShowLogoutConfirm(false)} className="h-9 px-4">
             Cancel
           </Button>
-          <Button variant="destructive" onClick={() => {
+          <Button variant="default" onClick={() => {
             setShowLogoutConfirm(false);
             logout();
           }} className="h-9 px-4">
