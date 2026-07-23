@@ -35,4 +35,9 @@ export class UsersController {
   deactivate(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
     return this.users.deactivate(id, user.id);
   }
+
+  @Post(':id/reactivate')
+  reactivate(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
+    return this.users.reactivate(id, user.id);
+  }
 }

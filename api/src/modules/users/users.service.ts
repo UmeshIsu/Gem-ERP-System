@@ -92,4 +92,15 @@ export class UsersService {
     await this.audit.log({ userId: actorId, action: 'DEACTIVATE', entity: 'User', entityId: id, after: user });
     return user;
   }
+
+  /** Restore a deactivated user so they can sign in again. */
+  async reactivate(id: string, actorId: string) {
+    const user = await this.prisma.user.update({
+      where: { id },
+      data: { isActive: true },
+      select: userSelect,
+    });
+    await this.audit.log({ userId: actorId, action: 'REACTIVATE', entity: 'User', entityId: id, after: user });
+    return user;
+  }
 }

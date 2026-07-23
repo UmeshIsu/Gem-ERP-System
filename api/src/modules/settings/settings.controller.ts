@@ -37,6 +37,12 @@ export class SettingsController {
     return this.settings.deactivate(this.settings.validateEntity(entity), id, user.id);
   }
 
+  @Post('master/:entity/:id/reactivate')
+  @Roles(Role.SUPER_ADMIN, Role.OWNER, Role.MANAGER)
+  reactivate(@Param('entity') entity: string, @Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
+    return this.settings.reactivate(this.settings.validateEntity(entity), id, user.id);
+  }
+
   @Get('backup')
   @Roles(Role.SUPER_ADMIN, Role.OWNER)
   @Header('Content-Disposition', 'attachment; filename="aura-gem-erp-backup.json"')

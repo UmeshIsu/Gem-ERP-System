@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Building2, Database, Download, Pencil, Plus, Power, Users } from 'lucide-react';
+import { Building2, Database, Download, Pencil, Plus, Power, RotateCcw, Users } from 'lucide-react';
 import { api, Paginated } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useCompany } from '@/lib/hooks';
@@ -167,6 +167,16 @@ function MasterDataTab({ entity }: { entity: string }) {
     }
   };
 
+  const reactivate = async (id: string) => {
+    try {
+      await api.post(`/settings/master/${entity}/${id}/reactivate`);
+      toast.success('Reactivated');
+      refresh();
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Failed');
+    }
+  };
+
   const fields = ENTITIES[entity].fields;
 
   return (
@@ -201,9 +211,13 @@ function MasterDataTab({ entity }: { entity: string }) {
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1">
                     <EntityDialog entity={entity} item={item} onDone={refresh} />
-                    {item.isActive && (
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={() => deactivate(item.id)}>
+                    {item.isActive ? (
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" title="Deactivate" onClick={() => deactivate(item.id)}>
                         <Power className="h-3.5 w-3.5" />
+                      </Button>
+                    ) : (
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-emerald-600" title="Reactivate" onClick={() => reactivate(item.id)}>
+                        <RotateCcw className="h-3.5 w-3.5" />
                       </Button>
                     )}
                   </div>
@@ -316,6 +330,16 @@ function UsersTab() {
     }
   };
 
+  const reactivate = async (id: string) => {
+    try {
+      await api.post(`/users/${id}/reactivate`);
+      toast.success('User reactivated');
+      refresh();
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Failed');
+    }
+  };
+
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between space-y-0">
@@ -350,9 +374,13 @@ function UsersTab() {
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1">
                     <UserDialog user={u} onDone={refresh} />
-                    {u.isActive && (
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={() => deactivate(u.id)}>
+                    {u.isActive ? (
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" title="Deactivate" onClick={() => deactivate(u.id)}>
                         <Power className="h-3.5 w-3.5" />
+                      </Button>
+                    ) : (
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-emerald-600" title="Reactivate" onClick={() => reactivate(u.id)}>
+                        <RotateCcw className="h-3.5 w-3.5" />
                       </Button>
                     )}
                   </div>

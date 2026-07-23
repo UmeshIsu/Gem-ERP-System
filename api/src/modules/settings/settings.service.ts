@@ -59,6 +59,13 @@ export class SettingsService {
     return row;
   }
 
+  /** Bring a previously deactivated record back into active use. */
+  async reactivate(entity: MasterEntity, id: string, userId: string) {
+    const row = await this.repo(entity).update({ where: { id }, data: { isActive: true } });
+    await this.audit.log({ userId, action: 'REACTIVATE', entity: ENTITY_LABEL[entity], entityId: id, after: row });
+    return row;
+  }
+
   /** Full-database JSON snapshot for backup. Restore is an operational task (pg_restore / prisma db push + import). */
   async backup() {
     const [
